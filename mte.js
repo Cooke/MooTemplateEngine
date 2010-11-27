@@ -1,4 +1,10 @@
-﻿MTEBindingExpression = new Class({
+﻿/* 
+MIT License 
+
+Copyright 2010 Henrik Cooke
+*/
+
+MTEBindingExpression = new Class({
     initialize: function (property, formatter) {
         this.property = property;
         this.formatter = formatter;
