@@ -7,7 +7,14 @@ license: MIT-style
 authors:
 - Henrik Cooke (http://null-tech.com)
 
-provides: [MTEEngine, MTEBindingExpression, MTEContextExpression, MTEObservableObject, MTEObservableMap, MTEObservableArray, Class.Mutators.MTEObservableAutoProperties]
+provides: 
+- MTEEngine
+- MTEBindingExpression
+- MTEContextExpression
+- MTEObservableObject
+- MTEObservableMap
+- MTEObservableArray
+- Class.Mutators.MTEObservableAutoProperties
 
 requires:
 - core/1.3:
