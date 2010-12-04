@@ -5,25 +5,25 @@ description: A template engine library used to write HTML-template with JavaScri
 license: MIT-style
 
 authors:
-- Henrik Cooke (http://null-tech.com)
+  - Henrik Cooke (http://null-tech.com)
 
 provides: 
-- MTEEngine
-- MTEBindingExpression
-- MTEContextExpression
-- MTEObservableObject
-- MTEObservableMap
-- MTEObservableArray
-- Class.Mutators.MTEObservableAutoProperties
+  - MTEEngine
+  - MTEBindingExpression
+  - MTEContextExpression
+  - MTEObservableObject
+  - MTEObservableMap
+  - MTEObservableArray
+  - Class.Mutators.MTEObservableAutoProperties
 
 requires:
-- core/1.3:
-  - Class
-  - Class.Extras
-  - Element
-  - Elements
-  - Array
-  - Object
+  - core/1.3:
+    - Class
+    - Class.Extras
+    - Element
+    - Elements
+    - Array
+    - Object
 
 ...
 */
