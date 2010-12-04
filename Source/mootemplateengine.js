@@ -1,7 +1,18 @@
-﻿/* 
-MIT License 
+﻿/*
+---
+description: A template engine library used to write HTML-template with JavaScript.
 
-Copyright 2010 Henrik Cooke
+license: MIT-style
+
+authors:
+- Henrik Cooke (http://null-tech.com)
+
+requires:
+- core/1.3:
+
+provides: [MTEBindingExpression, MTEContextExpression, MTEEngine, MTEObservableObject, MTEObservableMap, MTEObservableArray, Class.Mutators.MTEObservableAutoProperties]
+
+...
 */
 
 MTEBindingExpression = new Class({
