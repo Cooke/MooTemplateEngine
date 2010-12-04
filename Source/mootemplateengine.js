@@ -23,7 +23,7 @@ provides:
 - MTEObservableObject
 - MTEObservableMap
 - MTEObservableArray
-- Class.Mutators.MTEObservableAutoProperties]
+- Class.Mutators.MTEObservableAutoProperties
 
 ...
 */
