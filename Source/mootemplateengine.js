@@ -16,7 +16,7 @@ requires:
   - Array
   - Object
 
-provides: 
+provides:
 - MTEEngine
 - MTEBindingExpression
 - MTEContextExpression
