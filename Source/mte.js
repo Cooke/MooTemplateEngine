@@ -7,7 +7,7 @@ license: MIT-style
 authors:
   - Henrik Cooke (http://null-tech.com)
 
-provides: 
+provides:
   - MTEEngine
   - MTEBindingExpression
   - MTEContextExpression
@@ -17,7 +17,7 @@ provides:
   - Class.Mutators.MTEObservableAutoProperties
 
 requires:
-  - core/1.3:
+  core/1.3:
     - Class
     - Class.Extras
     - Element

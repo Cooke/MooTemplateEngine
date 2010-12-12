@@ -5,14 +5,14 @@ description: An extension to the MTE library to use "HTML" markup to create temp
 license: MIT-style
 
 authors:
-- Henrik Cooke (http://null-tech.com)
+  - Henrik Cooke (http://null-tech.com)
 
 provides: 
-- MTEEngine.Markup
+  - MTEEngine.Markup
 
 requires:
-- MTEEngine/0.2:
-- core/1.3: [Request.HTML]
+  MTEEngine/0.1: MTEEngine
+  core/1.3: Request.HTML
 
 ...
 */
