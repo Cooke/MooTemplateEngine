@@ -104,8 +104,7 @@ Using markup templates:
 	$('page').adopt(templates.template1(dataForTemplate1));
 	$('page').adopt(templates.template2(dataForTemplate2));
 
-An example using observable models and collections:
-	Visit [http://mte.null-tech.com/demos.html#ex6](http://mte.null-tech.com/demos.html#ex6)	
+For an example demonstrating observable models and collections please visit [http://mte.null-tech.com/demos.html#ex6](http://mte.null-tech.com/demos.html#ex6)	
 
 More information
 -----------------
