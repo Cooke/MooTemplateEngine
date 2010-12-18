@@ -25,12 +25,10 @@ A simple template without a data source:
 				h1('My Title'),
 				p('This is my content'),
 				p('Webpage: ', a({href: 'http://www.google.com'}, 'google.com')));
-
-		element = template();
-		$('page').adopt(element);					
 	};
 
-	$('page').adopt(template());
+	element = template();
+	$('page').adopt(element);
 	
 A template with a simple data source:
 
