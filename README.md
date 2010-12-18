@@ -77,7 +77,8 @@ A more complex example:
 	
 	$('page').adopt(template(data));
 	
-Templates created with "HTML" markup:
+Templates created with "HTML" markup in the DOM:
+
 	<script type="text/mte" id="templates">
 		<div id="template1">
 			Hello <bind property="name" />!<br />
