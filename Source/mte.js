@@ -7,9 +7,10 @@ license: MIT-style
 authors:
   - Henrik Cooke (http://null-tech.com)
 
-provides:
+provides: 
   - MTEEngine
   - MTEBindingExpression
+  - MTEMultiBindingExpression
   - MTEContextExpression
   - MTEObservableObject
   - MTEObservableMap
@@ -17,7 +18,7 @@ provides:
   - Class.Mutators.MTEObservableAutoProperties
 
 requires:
-  core/1.3:
+  - core/1.3:
     - Class
     - Class.Extras
     - Element
@@ -42,52 +43,119 @@ MTEBindingExpression = new Class({
         }
     },
 
-    _observableApply: function (engine, element, bindingSource, key) {
-        // Throw guards
-        if (!this.property) {
-            throw 'Binding error: a binding source property has to be specified when binding against an observable object';
+    _getData : function (source) {
+        var data;
+        if (!this.property || this.property == '.') {
+            data = source;
+        } else if (source.get) {
+            data = source.get(this.property)
+        } else {
+            data = source[this.property];
         }
-
-        var data = bindingSource.get(this.property);
-        if (!data) {
+        
+        if (data == undefined) {
             throw 'Binding error: the binding source property did not return any value (property: ' + this.property + ')';
         }
 
-        var formatWrapper = function (x) { return this.formatter ? this.formatter(x) : x; } .bind(this);
+        return data;
+    },
 
-        var childElement = getDocument().newTextNode(formatWrapper(data));
-        element.adopt(childElement);
+    _getFormatter : function () {
+        return function (x) { return this.formatter ? this.formatter(x) : x; }.bind(this);
+    },
 
-        bindingSource.listenChange(this.property, function (source, prop, value) {
-            var newChildElement = getDocument().newTextNode(formatWrapper(value));
-            childElement.parentNode.replaceChild(newChildElement, childElement);
-            childElement = newChildElement;
-        });
+    _createTextNode : function (bindingSource) {
+        var formatter = this._getFormatter();
+        var data = this._getData(bindingSource);
+        return getDocument().newTextNode(formatter(data));
+    },
+
+    _throwIfNoProperty: function () {
+        if (!this.property) {
+            throw 'Binding error: a binding source property has to be specified when binding against an observable object';
+        }
+    },
+
+    _observableApply: function (engine, element, bindingSource, key) {
+        this._throwIfNoProperty();
+        
+        this.childElement = this._createTextNode(bindingSource);
+        element.adopt(this.childElement);
+
+        this._listenForChanges(bindingSource);        
+    },
+
+    _listenForChanges: function(bindingSource) {
+        bindingSource.listenChange(this.property, function (source) {
+            this._updateChildElement(source);
+        }.bind(this));
+    },
+
+    _updateChildElement: function (source) {
+        var newChildElement = this._createTextNode(source);
+        this.childElement.parentNode.replaceChild(newChildElement, this.childElement);
+        this.childElement = newChildElement;
     },
 
     _regularApply: function (engine, element, bindingSource, key) {
         // Throw guards
-        if (typeOf(bindingSource) != 'object' && typeOf(bindingSource) != 'array' && this.property) {
+        if (typeOf(bindingSource) != 'object' && typeOf(bindingSource) != 'array' && this.property && this.property != '.') {
             throw 'Binding error: a binding source property may only be specified when the binding source is an object or an array';
         } else if ((typeOf(bindingSource) == 'object' || typeOf(bindingSource) == 'array') && !this.property) {
             throw 'Binding error: a binding source property must be specified when the binding source is an object or an array';
         } else if ((typeOf(bindingSource) == 'object' || typeOf(bindingSource) == 'array') && !bindingSource[this.property]) {
             throw 'Binding error: the binding source property did not return any value (property: ' + this.property + ')';
         }
-
-        var mydata = this.property ? bindingSource[this.property] : bindingSource;
-        mydata = this.formatter ? this.formatter(mydata) : mydata;
+        
+        var formatter = this._getFormatter();
+        var data = this._getData(bindingSource);
+        var formattedData = formatter(data);
 
         if (!key) {
-            if (engine.adoptable(mydata)) {
-                element.adopt(mydata);
+            if (engine.adoptable(formattedData)) {
+                element.adopt(formattedData);
             } else {
-                element.appendText(mydata);
+                element.appendText(formattedData);
             }
         } else {
-            element.set(key, mydata);
+            element.set(key, formattedData);
         }
     }
+});
+
+MTEMultiBindingExpression = new Class({
+    Implements: MTEBindingExpression,
+
+    initialize: function (properties, formatter) {        
+        this.properties = properties;
+        this.formatter = formatter;
+    },
+
+    _getData: function (source) {
+        var getFunction;
+        if (source.get) {            
+            getFunction = source.get.bind(source);
+        } else {
+            getFunction = function (x) { return source[x]; };
+        }
+
+        var data = this.properties.map(getFunction);        
+        return data;
+    },
+
+    _listenForChanges: function(bindingSource) {
+        this.properties.each(function (prop) {
+            bindingSource.listenChange(prop, function (source) {
+                this._updateChildElement(source);
+            }.bind(this));
+        }, this);        
+    },
+
+    _throwIfNoProperty: function () {
+        if (!this.properties) {
+            throw 'Binding error: a binding source property has to be specified when binding against an observable object';
+        }
+    },
 });
 
 MTEContextExpression = new Class({
@@ -109,6 +177,12 @@ MTEContextExpression = new Class({
     }
 });
 
+MTETemplate = new Class({
+	initialize: function(renderFunc) {
+		this.render = renderFunc;
+	}
+});
+
 MTEEngine = new Class({
     Binds: ['tag', 'createElement'],
 
@@ -125,12 +199,14 @@ MTEEngine = new Class({
         }, this);
     },
 
+	// Arguments: 
+	//tag name, content/child elements and binding expressions
     tag: function () {
         var engine = this;
         var argsin = Object.values(arguments);
         var tag = argsin.shift();
 
-        return function (data, parent) {
+        return new MTETemplate(function (data, parent) {
             var args = argsin;
 
             // Decide data context
@@ -193,7 +269,7 @@ MTEEngine = new Class({
             } else {
                 return engine.createElement(tag, args, data, engine);
             }
-        };
+        });
     },
 
     B: function (prop, formatter) {
@@ -201,6 +277,13 @@ MTEEngine = new Class({
     },
     bind: function (prop, formatter) {
         return new MTEBindingExpression(prop, formatter);
+    },
+
+    M: function (props, formatter) {
+        return new MTEMultiBindingExpression(props, formatter);
+    },
+    multibind: function (props, formatter) {                
+        return new MTEMultiBindingExpression(props, formatter);
     },
 
     C: function (prop) {
@@ -229,10 +312,10 @@ MTEEngine = new Class({
         }
 
         Array.each(args, function (arg) {
-            if (instanceOf(arg, MTEBindingExpression)) {
+            if (instanceOf(arg, MTEBindingExpression) || instanceOf(arg, MTEMultiBindingExpression)) {
                 arg.apply(engine, element, data);
-            } else if (typeOf(arg) == 'function') {
-                var out = arg(data, element);
+            } else if (instanceOf(arg, MTETemplate)) {
+                var out = arg.render(data, element);
                 if (engine.adoptable(out)) {
                     element.adopt(out);
                 } else {
@@ -265,116 +348,3 @@ MTEEngine = new Class({
     }
 });
 
-MTEObservableObject = new Class({
-    Binds: ['listenChange', 'triggerChange'],
-
-    isObservable: true,
-
-    bindings: new Events(),
-
-    get: function(property) {
-        var value = this[property];
-        if (this['get' + property.capitalize()] != null) {
-            value = this['get' + property.capitalize()]();
-        }
-        return value;
-    },
-
-    listenChange: function (property, eventHandler, initTrigger) {
-        if (initTrigger) {
-            eventHandler(this, property, this.get(property));
-        }
-
-        this.bindings.addEvent(property, eventHandler);
-    },
-
-    triggerChange: function (property, value) {
-        this.bindings.fireEvent(property, [this, property, value]);
-    }
-});
-
-MTEObservableMap = new Class({
-    Extends: Events,
-
-    map: {},
-
-    isObservableMap: true,
-
-    set: function (key, item) {
-        var oldItem = this.map[key];
-        this.map[key] = item;
-        if (oldItem) {
-            this.fireEvent('change', [item, key, oldItem, this]);
-        } else {
-            this.fireEvent('set', [item, key, this]);
-        }        
-    },
-
-    clear: function (key) {        
-        var item = this.map[key];
-        if (item) {
-            delete this.map[key];
-            this.fireEvent('clear', [item, key, this]);
-        }
-    }
-});
-
-MTEObservableArray = new Class({
-    Extends: Events,
-
-    items: [],
-
-    isObservableArray: true,
-
-    add: function (item) {
-        this.items.push(item);
-        this.fireEvent('add', [item, this.items.length - 1, this]);
-    },
-
-    remove: function (item) {
-        for (var i = this.items.length - 1; i > -1; i--) {
-            if (this.items[i] == item) {                
-                this.items.splice(i, 1);
-                this.fireEvent('remove', [item, i, this]);
-            }
-        }
-    }
-});
-
-// Can be used to auto implement getter and setter
-Class.Mutators.MTEObservableAutoProperties = function (configuration) {
-    var setFunction = function (item) {
-        return function (value) {
-            this[item] = value;
-            this.triggerChange(item, value);
-        };
-    };
-
-    var getFunction = function (item) {
-        return function () { return this[item]; };
-    };
-
-    configuration.each(function (item) {
-        var getName = ('get' + item.capitalize());
-        var setName = ('set' + item.capitalize());
-        var getterSetter = {};
-        getterSetter[getName] = getFunction(item);
-        getterSetter[setName] = setFunction(item);
-        this.implement(getterSetter);
-    }, this);
-
-    this.implement({
-        set: function (prop, value) {
-            var setName = ('set' + prop.capitalize());
-            this[setName](value);
-        },
-        get: function (prop) {
-            var getName = ('get' + prop.capitalize());
-            return this[getName]();
-        },
-        has: function (prop) {
-            var getName = ('get' + prop.capitalize());
-            return this[getName] != null;
-        }
-    });
-};

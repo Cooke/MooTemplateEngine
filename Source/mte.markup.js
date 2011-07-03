@@ -5,14 +5,14 @@ description: An extension to the MTE library to use "HTML" markup to create temp
 license: MIT-style
 
 authors:
-  - Henrik Cooke (http://null-tech.com)
+- Henrik Cooke (http://null-tech.com)
 
 provides: 
-  - MTEEngine.Markup
+- MTEEngine.Markup
 
 requires:
-  MTEEngine/0.1: MTEEngine
-  core/1.3: Request.HTML
+- MTEEngine/0.3:
+- core/1.3: [Request.HTML]
 
 ...
 */
@@ -54,32 +54,37 @@ MTEEngine.Markup = new Class({
     fromElement: function (element, formatters) {
         var type = typeOf(element);
 
-        if (type == 'textnode' || type == 'whitespace') {            
+        if (type == 'textnode' || type == 'whitespace') {
             return element.nodeValue;
         }
 
-        var tag = element.get('tag');
-        if (tag == 'bind') {
-            return this.bind(element.getProperty('property'), formatters ? formatters[element.getProperty('formatter')] : null);
-        }
+        var tagName = element.get('tag');
 
         var context = [];
-        if (element.getProperty('context')) {
-            context = [this.context(element.getProperty('context'))];
+        var contextProperty = element.getProperty('data-context');
+        if (contextProperty) {
+            context = [this.context(contextProperty)];
         }
 
+        var formatter = formatters ? formatters[element.getProperty('data-formatter')] : null;
+
         var childTemplates = [];
-        if (element.getProperty('bind')) {
-            childTemplates = [this.bind(element.getProperty('bind'), formatters ? formatters[element.getProperty('formatter')] : null)];
+        var bindProperty = element.getProperty('data-bind');        
+        if (bindProperty && bindProperty.contains(',')) {
+            var props = Array.map(bindProperty.split(','), function (x) { return x.trim(); });
+            childTemplates = [this.multibind(props, formatter)];
+        } else if (bindProperty) {
+            if (bindProperty == '') alert('Hej');
+            childTemplates = [this.bind(bindProperty, formatter)];
         } else if (element.childNodes) {
             var childElements = Array.from(element.childNodes);
             childTemplates = childElements.map(function (x) { return this.fromElement(x, formatters); }, this);
         }
 
-        var attributes = Array.from(element.attributes).map(function (attr) { return attr.name }); ;
+        var attributes = Array.from(element.attributes).map(function (attr) { return attr.name });
         var options = element.getProperties.apply(element, attributes);
-        options = Object.filter(options, function (value, key) { return value && !['bind', 'formatter', 'context'].contains(key); });
-        var args = [tag].append(context).append([options]).append(childTemplates);
+        // options = Object.filter(options, function (value, key) { return value && !['bind', 'formatter', 'context'].contains(key); });
+        var args = [tagName].append(context).append([options]).append(childTemplates);
         return this.tag.apply(this, args);
     }
 });
