@@ -15,13 +15,7 @@ provides:
 - MTETemplate
 
 requires:
-- core/1.3:
-  - Class
-  - Class.Extras
-  - Element
-  - Elements
-  - Array
-  - Object
+- core/1.3: [Class, Class.Extras, Element, Elements, Array, Object]
 
 ...
 */
