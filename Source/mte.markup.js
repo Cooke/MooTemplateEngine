@@ -1,6 +1,6 @@
 ﻿/*
 ---
-description: An extension to the MTE library to use "HTML" markup to create templates.
+description: An extension to the MTEEngine which helps to create templates from HTML.
 
 license: MIT-style
 
@@ -11,7 +11,7 @@ provides:
 - MTEEngine.Markup
 
 requires:
-- MTEEngine/0.3:
+- MTEEngine/0.2:
 - core/1.3: [Request.HTML]
 
 ...

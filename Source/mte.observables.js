@@ -1,6 +1,6 @@
 ﻿/*
 ---
-description: Observable data structures for use with Moo Template Engine.
+description: Observable data structures for use with the Moo Template Engine.
 
 license: MIT-style
 
@@ -15,13 +15,12 @@ provides:
 
 requires:
 - core/1.3:
-- Class
-- Class.Extras
-- Element
-- Elements
-- Array
-- Object
-- MTEEngine/0.3:
+  - Class
+  - Class.Extras
+  - Element
+  - Elements
+  - Array
+  - Object
 
 ...
 */

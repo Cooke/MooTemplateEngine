@@ -1,30 +1,27 @@
 ﻿/*
 ---
-description: A template engine library used to write HTML-template with JavaScript.
+description: A template engine library used to write HTML-templates with JavaScript.
 
 license: MIT-style
 
 authors:
-  - Henrik Cooke (http://null-tech.com)
+- Henrik Cooke (http://null-tech.com)
 
 provides: 
-  - MTEEngine
-  - MTEBindingExpression
-  - MTEMultiBindingExpression
-  - MTEContextExpression
-  - MTEObservableObject
-  - MTEObservableMap
-  - MTEObservableArray
-  - Class.Mutators.MTEObservableAutoProperties
+- MTEEngine
+- MTEBindingExpression
+- MTEMultiBindingExpression
+- MTEContextExpression
+- MTETemplate
 
 requires:
-  - core/1.3:
-    - Class
-    - Class.Extras
-    - Element
-    - Elements
-    - Array
-    - Object
+- core/1.3:
+  - Class
+  - Class.Extras
+  - Element
+  - Elements
+  - Array
+  - Object
 
 ...
 */
