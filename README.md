@@ -1,7 +1,7 @@
 Moo Template Engine
 ===========
 
-The Moo Template Engine (MTE) provides the means to easily create HTML templates from JavaScript or "HTML" markup. 
+The Moo Template Engine (MTE) provides the means to easily create HTML templates from JavaScript or HTML. 
 The templates let you render DOM elements which can be inserted in to the DOM tree.
 
 The rendered elements may be customized (data bound) by supplying rendering data (a data source) upon rendering.
@@ -11,39 +11,24 @@ the data source is modified.
 How to use
 ----------
 
-This section gives a short introduction to the library with help of examples. For more demos, documentation and information 
+This section gives a super short introduction to the library with help of a few examples (not covering all features). For more demos, documentation and information 
 please visit [http://mte.null-tech.com](http://mte.null-tech.com)
 
-A simple template without a data source:
+A simple example when the template is created with HTML:
 
-	var engine = new MTEEngine();
-	var template = null;
+	<div id="template">
+		<h1 data-bind="name"></h1>
+		<p>You are <span data-bind="age"></span> years old!
+	</div>
 
-	with(engine) {
-		template = 
-			div({class: 'myClass'},
-				h1('My Title'),
-				p('This is my content'),
-				p('Webpage: ', a({href: 'http://www.google.com'}, 'google.com')));
-	};
+	<script type="text/javascript">
+		var engine = new MTEEngine.Markup();
+		var template = engine.fromElement('template');
 
-	element = template();
-	$('page').adopt(element);
+		$('page').adopt(template.render({name: 'My Name', age: 99}));
+	</script>
 	
-A template with a simple data source:
-
-	var engine = new MTEEngine();
-	var template = null;
-
-	with(engine) {
-		template = 
-			div({id: 'myId'}, 
-				strong('Hello '), bind('myProperty'), '!');						
-	};
-
-	$('page').adopt(template({myProperty: 'MyValue'}));
-	
-A template rendered with an array data source:
+A template rendered with an array as data source:
 
 	var engine = new MTEEngine();
 	var template = null;
@@ -53,7 +38,7 @@ A template rendered with an array data source:
 			div(bind(), br());						
 	};
 
-	$('page').adopt(template(['One', 'Two', 'Three']));
+	$('page').adopt(template.render(['One', 'Two', 'Three']));
 	
 A more complex example:
 
@@ -73,35 +58,17 @@ A more complex example:
 		pets: ['Dog', 'Hourse', 'Super Beaver']
 	};
 	
-	$('page').adopt(template(data));
+	$('page').adopt(template.render(data));
 	
-Templates created with "HTML" markup in the DOM:
-
-	<script type="text/mte" id="templates">
-		<div id="template1">
-			Hello <bind property="name" />!<br />
-			You are <strong bind="age"></strong> years old!
-		</div>
-
-		<div id="template2">
-			This is <em>template2</em>!
-		</div>
-	</script>
-	
-Using markup templates:
+Using templates created with HTML in a separate file which is loaded asynchronously:
 	
 	var engine = new MTEEngine.Markup();
 	
 	// Loading templates from external file
 	engine.load('templates.html', {}, function(templates) {		
-		$('page').adopt(templates.templateA(dataForTemplateA));
-		$('page').adopt(templates.templateB(dataForTemplateB));
-	});
-	
-	// Loading template from internal script node
-	var templates = engine.fromMarkup($('templates').get('html'));
-	$('page').adopt(templates.template1(dataForTemplate1));
-	$('page').adopt(templates.template2(dataForTemplate2));
+		$('page').adopt(templates.templateA.render(dataForTemplateA));
+		$('page').adopt(templates.templateB.render(dataForTemplateB));
+	});	
 
 For an example demonstrating observable models and collections please visit [http://mte.null-tech.com/demos.html#ex6](http://mte.null-tech.com/demos.html#ex6)	
 
