@@ -7,7 +7,7 @@ license: MIT-style
 authors:
 - Henrik Cooke (http://null-tech.com)
 
-provides: 
+provides:
 - MTEEngine
 - MTEBindingExpression
 - MTEMultiBindingExpression

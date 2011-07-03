@@ -11,7 +11,7 @@ provides:
 - MTEEngine.Markup
 
 requires:
-- MTEEngine/0.2:
+- MTEEngine/0.2
 - core/1.3: [Request.HTML]
 
 ...
