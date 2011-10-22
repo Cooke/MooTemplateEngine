@@ -31,17 +31,17 @@ A simple HTML template:
 	
 A HTML template which renders an array:
 
-	<ul id="template" data-list=".">
+	<ul id="template" data-list="numbers">
 		<li data-bind=".">			
 		</li>
 	</ul>
 
-	var engine = new MTEEngine();
+	var engine = new MTEEngine.Markup();
 	var template = engine.fromElement('template');
 
-	$('page').adopt(template.render(['One', 'Two', 'Three']));
+	$('page').adopt(template.render({numbers: ['One', 'Two', 'Three']));
 	
-A more complex with a template created in JS:
+Another template created in JS:
 
 	var engine = new MTEEngine();
 	var template = null;
@@ -70,9 +70,7 @@ Using templates created with HTML in a separate file which is loaded asynchronou
 		$('page').adopt(templates.templateA.render(dataForTemplateA));
 		$('page').adopt(templates.templateB.render(dataForTemplateB));
 	});	
-
-For an example demonstrating observable models and collections please visit [http://mte.null-tech.com/demos.html#ex6](http://mte.null-tech.com/demos.html#ex6)	
-
+	
 More information
 -----------------
 For more information please visit [http://mte.null-tech.com](http://mte.null-tech.com)

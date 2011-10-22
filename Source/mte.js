@@ -282,7 +282,7 @@ MTEEngine = new Class({
         }
 
         var elementProperties = {};
-        if (typeOf(args[0]) == 'object') {
+        if (typeOf(args[0]) == 'object' && !instanceOf(args[0], MTEBaseExpression)) {
             elementProperties = args.shift();
         }
 
