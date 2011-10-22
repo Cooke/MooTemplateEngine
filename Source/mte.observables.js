@@ -19,11 +19,38 @@ requires:
 ...
 */
 MTEObservableObject = new Class({
-    Binds: ['listenChange', 'triggerChange', 'get'],
+    Binds: ['listenChange', 'triggerChange', 'get', 'set', 'update', 'listenChanges', 'ignoreChanges'],
 
-    isObservable: true,
+    bindings: new Events(),    
 
-    bindings: new Events(),
+    listenChange: function (property, eventHandler, initTrigger) {
+        if (initTrigger) {
+            eventHandler(this, property, this.get(property), this.get(property));
+        }
+
+        this.bindings.addEvent(property, eventHandler);
+    },
+
+    listenChanges: function (eventHandler, initTrigger) {
+        if (initTrigger) {
+            eventHandler(this, '*');
+        }
+
+        this.bindings.addEvent('*', eventHandler);
+    },
+
+    ignoreChanges: function (eventHandler) {
+        this.bindings.removeEvent(eventHandler);
+    },
+
+    ignoreChange: function (property, eventHandler) {
+        this.bindings.removeEvent(property, eventHandler);
+    },
+
+    triggerChange: function (property, value, oldValue) {
+        this.bindings.fireEvent(property, [this, property, value, oldValue]);
+        this.bindings.fireEvent('*', [this, property, value, oldValue]);
+    },
 
     get: function (property) {
         if (this['get' + property.capitalize()] != null) {
@@ -33,16 +60,39 @@ MTEObservableObject = new Class({
         }
     },
 
-    listenChange: function (property, eventHandler, initTrigger) {
-        if (initTrigger) {
-            eventHandler(this, property, this.get(property));
-        }
-
-        this.bindings.addEvent(property, eventHandler);
+    set: function (prop, value) {
+        var oldValue = this[prop];
+        this[prop] = value;
+        this.triggerChange(prop, value, oldValue);
     },
 
-    triggerChange: function (property, value) {
-        this.bindings.fireEvent(property, [this, property, value]);
+    update: function (object) {
+        Object.each(object, function (value, key) {
+            key = key.lowerize();            
+            
+            if (this[key] == undefined && typeOf(value) == 'object') {
+                var newModel = new MTEObservableObject();
+                newModel.update(value);
+                this.set(key, newModel);
+            } else if (instanceOf(this[key], MTEObservableObject) && typeOf(value) == 'object') {
+                this[key].update(value);                
+                this.triggerChange(key, this[key], undefined);
+            } else if (typeOf(value) == 'array') {
+                var newArray = value.map(function(item) {
+                    if (typeOf(item) == 'object') {
+                        var newItem = new MTEObservableObject();
+                        newItem.update(item);
+                        return newItem;
+                    } else {
+                        return item;
+                    }
+                });
+
+                this.set(key, newArray);
+            } else {
+                this.set(key, value);                
+            }
+        }, this);
     }
 });
 

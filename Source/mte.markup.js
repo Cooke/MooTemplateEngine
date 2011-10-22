@@ -69,22 +69,46 @@ MTEEngine.Markup = new Class({
         var formatter = formatters ? formatters[element.getProperty('data-formatter')] : null;
 
         var childTemplates = [];
-        var bindProperty = element.getProperty('data-bind');        
-        if (bindProperty && bindProperty.contains(',')) {
-            var props = Array.map(bindProperty.split(','), function (x) { return x.trim(); });
-            childTemplates = [this.multibind(props, formatter)];
-        } else if (bindProperty) {
-            if (bindProperty == '') alert('Hej');
-            childTemplates = [this.bind(bindProperty, formatter)];
+        var bindProperty = element.getProperty('data-bind');
+        if (bindProperty) {
+            childTemplates = [this.bind(this._extractProperties(bindProperty), formatter)];
         } else if (element.childNodes) {
             var childElements = Array.from(element.childNodes);
             childTemplates = childElements.map(function (x) { return this.fromElement(x, formatters); }, this);
         }
 
+        var listProperty = element.getProperty('data-list');
+        if (listProperty) {
+            var t = this.fromElement(element.getChildren()[0], formatters);
+            childTemplates = [this.list(listProperty, t)];
+        }
+
         var attributes = Array.from(element.attributes).map(function (attr) { return attr.name });
         var options = element.getProperties.apply(element, attributes);
-        // options = Object.filter(options, function (value, key) { return value && !['bind', 'formatter', 'context'].contains(key); });
+
+        Object.each(options, function (item, key) {
+            var match = key.match(/data-bind-(.*)/);
+            if (match && match.length == 2) {
+                options[match[1]] = this.bind(this._extractProperties(item), formatter);
+            }
+        }, this);
+
+        var displayProperty = element.getProperty('data-display');
+        if (displayProperty) {
+            childTemplates.push(this.display(displayProperty, formatter));
+        }
+
+        options = Object.filter(options, function (value, key) { return value && !['data-formatter', 'data-context', 'id', 'data-list'].contains(key) && !key.contains('data-bind') });
+
         var args = [tagName].append(context).append([options]).append(childTemplates);
         return this.tag.apply(this, args);
+    },
+
+    _extractProperties: function (bindProperty) {
+        if (bindProperty.contains(',')) {
+            return Array.map(bindProperty.split(','), function (x) { return x.trim(); });
+        } else {
+            return bindProperty;
+        }
     }
 });

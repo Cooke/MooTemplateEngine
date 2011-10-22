@@ -1,7 +1,7 @@
 Moo Template Engine
 ===========
 
-The Moo Template Engine (MTE) provides the means to easily create HTML templates from JavaScript or HTML. 
+The Moo Template Engine (MTE) provides the means to easily create HTML templates from JavaScript and HTML. 
 The templates let you render DOM elements which can be inserted in to the DOM tree.
 
 The rendered elements may be customized (data bound) by supplying rendering data (a data source) upon rendering.
@@ -14,33 +14,34 @@ How to use
 This section gives a super short introduction to the library with help of a few examples (not covering all features). For more demos, documentation and information 
 please visit [http://mte.null-tech.com](http://mte.null-tech.com)
 
-A simple example when the template is created with HTML:
+A simple HTML template:
 
 	<div id="template">
 		<h1 data-bind="name"></h1>
 		<p>You are <span data-bind="age"></span> years old!
+		<a data-bind-href="homepage" data-bind="homepage"></a>
 	</div>
 
 	<script type="text/javascript">
 		var engine = new MTEEngine.Markup();
 		var template = engine.fromElement('template');
 
-		$('page').adopt(template.render({name: 'My Name', age: 99}));
+		$('page').adopt(template.render({name: 'My Name', age: 99, homepage: 'http://www.mypage.com'}));
 	</script>
 	
-A template rendered with an array as data source:
+A HTML template which renders an array:
+
+	<ul id="template" data-list=".">
+		<li data-bind=".">			
+		</li>
+	</ul>
 
 	var engine = new MTEEngine();
-	var template = null;
-
-	with(engine) {
-		template = 
-			div(bind(), br());						
-	};
+	var template = engine.fromElement('template');
 
 	$('page').adopt(template.render(['One', 'Two', 'Three']));
 	
-A more complex example:
+A more complex with a template created in JS:
 
 	var engine = new MTEEngine();
 	var template = null;
