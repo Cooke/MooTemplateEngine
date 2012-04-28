@@ -5,13 +5,13 @@ description: An extension to the MTEEngine which helps to create templates from 
 license: MIT-style
 
 authors:
-- Henrik Cooke (http://null-tech.com)
+- Henrik Cooke (http://mte.null-tech.com)
 
 provides: 
 - MTEEngine.Markup
 
 requires:
-- MTEEngine/0.2
+- MTEEngine/0.4
 - core/1.3: [Request.HTML]
 
 ...
@@ -52,6 +52,7 @@ MTEEngine.Markup = new Class({
     },
 
     fromElement: function (element, formatters) {
+        element = $(element);
         var type = typeOf(element);
 
         if (type == 'textnode' || type == 'whitespace') {
@@ -79,8 +80,14 @@ MTEEngine.Markup = new Class({
 
         var listProperty = element.getProperty('data-list');
         if (listProperty) {
+            var listProperties = this._extractProperties(listProperty);
             var t = this.fromElement(element.getChildren()[0], formatters);
-            childTemplates = [this.list(listProperty, t)];
+            if (typeOf(listProperties) == 'array') {
+                childTemplates = [this.list(listProperties[0], t, listProperties[1])];
+            }
+            else {
+                childTemplates = [this.list(listProperty, t)];
+            }
         }
 
         var attributes = Array.from(element.attributes).map(function (attr) { return attr.name });

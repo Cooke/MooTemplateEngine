@@ -5,7 +5,7 @@ description: A template engine library used to write HTML-templates with JavaScr
 license: MIT-style
 
 authors:
-- Henrik Cooke (http://null-tech.com)
+- Henrik Cooke (http://mte.null-tech.com)
 
 provides:
 - MTEEngine
@@ -27,14 +27,14 @@ MTEBaseExpression = new Class({
     },
 
     listenForDataContextChanges: function (parent, updateFunc) {
-        var currentDataContext = parent.dataContext;
-        this._listenDataContextChanges(currentDataContext, updateFunc);        
+        var lastDataContext = parent.dataContext;
+        this._listenDataContextChanges(parent.dataContext, updateFunc);        
 
         parent.dataContextEvents.addEvent('changed', function() {
-            this._ignoreDataContextChanges(currentDataContext, updateFunc);
+            this._ignoreDataContextChanges(lastDataContext, updateFunc);
             updateFunc();
-            currentDataContext = parent.dataContext;
-            this._listenDataContextChanges(currentDataContext, updateFunc);                    
+            lastDataContext = parent.dataContext;
+            this._listenDataContextChanges(parent.dataContext, updateFunc);                    
         }.bind(this));
     },
 
@@ -72,7 +72,7 @@ MTEBaseExpression = new Class({
                 dataContext.ignoreChange(this.property, updateFunc);
             }
         }
-    },
+    }
 });
 
 MTEBindingExpression = new Class({
@@ -130,17 +130,24 @@ MTEBindingExpression = new Class({
 MTEDisplayExpression = new Class({
     Extends: MTEBaseExpression,
 
-    initialize: function (engine, property, template) {
+    initialize: function (engine, property, formatter) {
+        this.formatter = formatter;
         this.parent(engine, property);
     },
 
-    apply: function(parent) {
-        var updateFunc = function() {
-            parent.setStyle('display', this.getData(parent.dataContext) ? null : 'none');
-        }.bind(this);
+    apply: function (parent) {
+        var formatter = this._getFormatter();
+        var updateFunc = function () {
+            var val = formatter(this.getData(parent.dataContext)) ? null : 'none';
+            parent.setStyle('display', val);
+        } .bind(this);
 
         updateFunc();
         this.listenForDataContextChanges(parent, updateFunc);
+    },
+
+    _getFormatter: function () {
+        return function (x, y) { return this.formatter ? this.formatter(x, y) : x; } .bind(this);
     }
 });
 
@@ -165,39 +172,89 @@ MTEContextExpression = new Class({
 });
 
 MTEListExpression = new Class({
-    Extends: MTEBaseExpression, 
+    Extends: MTEBaseExpression,
 
-    initialize: function(engine, property, itemTemplate) {
-        this.engine = engine;
-        this.property = property;
+    initialize: function (engine, property, itemTemplate, sortProperty) {
+        this.parent(engine, property);
         this.itemTemplate = itemTemplate;
+        this.sortProperty = sortProperty;
     },
 
     apply: function (parent) {
-        var nodes = this._createNodes(parent);
-        parent.adopt(nodes);
+        var keyElementMap = {};
+        var lastSourceChangedHandler = null;
+        var lastSource = null;
 
-        var updateFunc = function() {
-            var newNodes = this._createNodes(parent);
+        var bindingSourceChangedHandlerFunc = function () {
+            if (lastSource && lastSource.listenChanges && lastSourceChangedHandler) {
+                lastSource.ignoreChanges(lastSourceChangedHandler);
+            }
+
+            var source = (!parent.dataContext || this.property == '.') ? parent.dataContext : parent.dataContext[this.property];
+            keyElementMap = {};
             parent.empty();
-            parent.adopt(newNodes);
-        }.bind(this);
+            this._createNodes(parent, source, keyElementMap);
 
-        this.listenForDataContextChanges(parent, updateFunc);
+            if (source && source.listenChanges) {
+                lastSourceChangedHandler = this.handleSourceChanged.bind(this, parent, keyElementMap);
+                source.listenChanges(lastSourceChangedHandler, false);
+            }
+
+            lastSource = source;
+        } .bind(this);
+
+        bindingSourceChangedHandlerFunc();
+        this.listenForDataContextChanges(parent, bindingSourceChangedHandlerFunc);
     },
 
-    _createNodes: function (parent) {                
-        var source = (!parent.dataContext || this.property == '.') ? parent.dataContext : parent.dataContext[this.property];
-        if (!source || !source.each) {
-            return getDocument().newTextNode('');
+    handleSourceChanged: function (parent, keyElementMap, source, key, val) {
+        if (val) {
+            var obj = {};
+            obj[key] = val;
+            this._createNodes(parent, obj, keyElementMap);
+        } else {
+            var oldEl = keyElementMap[key];
+            oldEl.destroy();
+            delete keyElementMap[key];
+        }
+    },
+
+    _createNodes: function (parent, source, keyElementMap) {
+        if (!source) {
+            parent.adopt(getDocument().newTextNode(''));
+        } else if (source.each) {
+            source.each(function (item, key) {
+                this._createNode(parent, keyElementMap, item, key);
+            } .bind(this));
+        } else if (typeOf(source) == 'object') {
+            Object.each(source, function(item, key) {
+                this._createNode(parent, keyElementMap, item, key);
+            }, this);
+        }
+    },
+
+    _createNode: function (parent, keyElementMap, item, key) {
+        var el = this.itemTemplate.render(item);
+        if (this.sortProperty) {
+            var otherNodes = parent.getChildren();
+            var injectBefore = null;
+            for (var i = 0; i < otherNodes.length; i++) {
+                if (item.get(this.sortProperty) < otherNodes[i].dataContext.get(this.sortProperty)) {
+                    injectBefore = otherNodes[i];
+                    break;
+                }
+            }
+
+            if (!injectBefore) {
+                parent.adopt(el);
+            } else {
+                el.inject(injectBefore, 'before');
+            }
+        } else {
+            parent.adopt(el);
         }
 
-        var nodes = new Elements();
-        source.each(function (item) {            
-            nodes.push(this.itemTemplate.render(item));
-        }.bind(this));
-
-        return nodes;
+        keyElementMap[key] = el;
     }
 });
 
@@ -250,7 +307,7 @@ MTETemplate = new Class({
         });
 
         return element;
-    },
+    }
 });
 
 MTEEngine = new Class({
@@ -289,11 +346,11 @@ MTEEngine = new Class({
         return new MTETemplate(this, tag, contextExpression, elementProperties, args);
     },
 
-    L: function (prop, itemTemplate) {
-        return new MTEListExpression(this, prop, itemTemplate);
+    L: function (prop, itemTemplate, sortProperty) {
+        return new MTEListExpression(this, prop, itemTemplate, sortProperty);
     },
-    list: function (prop, itemTemplate) {
-        return new MTEListExpression(this, prop, itemTemplate);
+    list: function (prop, itemTemplate, sortProperty) {
+        return new MTEListExpression(this, prop, itemTemplate, sortProperty);
     },
 
     B: function (prop, formatter) {
