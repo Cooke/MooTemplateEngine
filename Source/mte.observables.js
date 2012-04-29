@@ -9,9 +9,6 @@ authors:
 
 provides: 
 - MTEObservableObject
-- MTEObservableMap
-- MTEObservableArray
-- Class.Mutators.MTEObservableAutoProperties
 
 requires:
 - core/1.3: [Class, Class.Extras, Element, Elements, Array, Object]
@@ -19,12 +16,12 @@ requires:
 ...
 */
 MTEObservableObject = new Class({
-    Binds: ['listenChange', 'triggerChange', 'get', 'set', 'update', 'listenChanges', 'ignoreChanges'],
-
     bindings: new Events(),
 
     initialize: function (initData) {
-        this.update(initData);
+        if (initData) {
+            this.update(initData);
+        }
     },
 
     isSpecialProperty: function (property) {
@@ -107,7 +104,6 @@ MTEObservableObject = new Class({
                 this.set(key, newModel);
             } else if (instanceOf(this[key], MTEObservableObject) && typeOf(value) == 'object') {
                 this[key].update(value, remove);
-                //this.triggerChange(key, this[key], undefined);
             } else if (typeOf(value) == 'array') {
                 var newArray = value.map(function (item) {
                     if (typeOf(item) == 'object') {

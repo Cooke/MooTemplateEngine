@@ -90,7 +90,7 @@ MTEEngine.Markup = new Class({
             }
         }
 
-        var attributes = Array.from(element.attributes).map(function (attr) { return attr.name });
+        var attributes = Array.from(element.attributes).map(function (attr) { return attr.name; });
         var options = element.getProperties.apply(element, attributes);
 
         Object.each(options, function (item, key) {
