@@ -21,8 +21,7 @@ requires:
 */
 
 MTEBaseExpression = new Class({
-    initialize: function(engine, property) {
-        this.engine = engine;
+    initialize: function(property) {
         this.property = property;
     },
 
@@ -78,8 +77,8 @@ MTEBaseExpression = new Class({
 MTEBindingExpression = new Class({
     Extends: MTEBaseExpression,
 
-    initialize: function (engine, property, formatter) {
-        this.parent(engine, property);
+    initialize: function (property, formatter) {
+        this.parent(property);
         this.formatter = formatter;
     },
 
@@ -115,7 +114,7 @@ MTEBindingExpression = new Class({
         var formattedData = formatter(data);
 
         var node = formattedData;
-        if (!this.engine.adoptable(formattedData)) {
+        if (!MTEUtil.isAdoptable(formattedData)) {
             node = getDocument().newTextNode(formattedData);
         }
 
@@ -130,9 +129,9 @@ MTEBindingExpression = new Class({
 MTEDisplayExpression = new Class({
     Extends: MTEBaseExpression,
 
-    initialize: function (engine, property, formatter) {
+    initialize: function (property, formatter) {
         this.formatter = formatter;
-        this.parent(engine, property);
+        this.parent(property);
     },
 
     apply: function (parent) {
@@ -151,11 +150,36 @@ MTEDisplayExpression = new Class({
     }
 });
 
+MTECssStyleExpression = new Class({
+    Extends: MTEBaseExpression,
+
+    initialize: function (property, style, formatter) {
+        this.formatter = formatter;
+        this.style = style;
+        this.parent(property);
+    },
+
+    apply: function (parent) {
+        var formatter = this._getFormatter();
+        var updateFunc = function () {
+            var val = formatter(this.getData(parent.dataContext));
+            parent.setStyle(this.style, val);
+        } .bind(this);
+
+        updateFunc();
+        this.listenForDataContextChanges(parent, updateFunc);
+    },
+
+    _getFormatter: function () {
+        return function (x, y) { return this.formatter ? this.formatter(x, y) : x; } .bind(this);
+    }
+});
+
 MTEContextExpression = new Class({
     Extends: MTEBaseExpression,
 
-    initialize: function (engine, property, template) {
-        this.parent(engine, property);
+    initialize: function (property, template) {
+        this.parent(property);
     },
 
     apply: function (element, parent) {
@@ -174,8 +198,8 @@ MTEContextExpression = new Class({
 MTEListExpression = new Class({
     Extends: MTEBaseExpression,
 
-    initialize: function (engine, property, itemTemplate, sortProperty) {
-        this.parent(engine, property);
+    initialize: function (property, itemTemplate, sortProperty) {
+        this.parent(property);
         this.itemTemplate = itemTemplate;
         this.sortProperty = sortProperty;
     },
@@ -195,8 +219,11 @@ MTEListExpression = new Class({
             parent.empty();
             this._createNodes(parent, source, keyElementMap);
 
-            if (source && source.listenChanges) {
-                lastSourceChangedHandler = this.handleSourceChanged.bind(this, parent, keyElementMap);
+            if (source && source.listenChanges) {                
+                var self = this;
+                lastSourceChangedHandler = function(src, key, val) {
+                    self.handleSourceChanged(self, parent, keyElementMap, src, key, val);
+                };
                 source.listenChanges(lastSourceChangedHandler, false);
             }
 
@@ -207,12 +234,12 @@ MTEListExpression = new Class({
         this.listenForDataContextChanges(parent, bindingSourceChangedHandlerFunc);
     },
 
-    handleSourceChanged: function (parent, keyElementMap, source, key, val) {
+    handleSourceChanged: function (self, parent, keyElementMap, source, key, val) {
         if (val) {
             var obj = {};
             obj[key] = val;
-            this._createNodes(parent, obj, keyElementMap);
-        } else {
+            self._createNodes(parent, obj, keyElementMap);
+        } else if (keyElementMap[key]) {            
             var oldEl = keyElementMap[key];
             oldEl.destroy();
             delete keyElementMap[key];
@@ -227,7 +254,7 @@ MTEListExpression = new Class({
                 this._createNode(parent, keyElementMap, item, key);
             } .bind(this));
         } else if (typeOf(source) == 'object') {
-            Object.each(source, function(item, key) {
+            Object.each(source, function (item, key) {
                 this._createNode(parent, keyElementMap, item, key);
             }, this);
         }
@@ -261,26 +288,24 @@ MTEListExpression = new Class({
 MTETemplate = new Class({
     Binds: ['createElement'],
 
-	initialize: function(engine, tag, contextExpression, elementProperties, children) {
-        this.engine = engine;
-		this.tag = tag;
+    initialize: function (tag, contextExpression, elementProperties, children) {
+        this.tag = tag;
         this.contextExpression = contextExpression;
         this.elementProperties = elementProperties;
         this.children = children;
     },
 
-    render: function(initialDataContext) {
+    render: function (initialDataContext) {
         var fakeParent = { dataContext: initialDataContext, dataContextEvents: new Events() };
         return this.createElement(fakeParent);
     },
 
     createElement: function (parent) {
-        var engine = this.engine;
         var element = new Element(this.tag);
         this.contextExpression.apply(element, parent);
 
         Object.each(this.elementProperties, function (item, key) {
-            if (instanceOf(item, MTEBindingExpression)) {                
+            if (instanceOf(item, MTEBindingExpression)) {
                 item.applyToAttribute(element, key);
             } else {
                 element.set(key, item);
@@ -288,18 +313,18 @@ MTETemplate = new Class({
         });
 
         Array.each(this.children, function (child) {
-            if (instanceOf(child, MTEBindingExpression) || instanceOf(child, MTEDisplayExpression)) {
+            if (instanceOf(child, MTEBindingExpression) || instanceOf(child, MTEDisplayExpression) || instanceOf(child, MTECssStyleExpression)) {
                 child.apply(element);
             } else if (instanceOf(child, MTEListExpression)) {
                 child.apply(element);
-            } else if (instanceOf(child, MTETemplate)) {
+            } else if (instanceOf(child, MTETemplate) || instanceOf(child, MTETemplateReference)) {
                 var out = child.createElement(element);
-                if (engine.adoptable(out)) {
+                if (MTEUtil.isAdoptable(out)) {
                     element.adopt(out);
                 } else {
                     element.appendText(out);
                 }
-            } else if (engine.adoptable(child)) {
+            } else if (MTEUtil.isAdoptable(child)) {
                 element.adopt(child);
             } else {
                 element.appendText(child);
@@ -310,10 +335,23 @@ MTETemplate = new Class({
     }
 });
 
+MTETemplateReference = new Class({
+    initialize: function (templatesSolver, template) {
+        this.templatesSolver = templatesSolver;
+        this.template = template;
+    },
+
+    createElement: function (parent) {
+        return this.templatesSolver(this.template).createElement(parent);
+    }
+});
+
 MTEEngine = new Class({
     Binds: ['tag', 'C', 'context'],
 
     tags: ['a', 'abbr', 'acronym', 'address', 'applet', 'area', 'article', 'aside', 'audio', 'b', 'base', 'basefont', 'bdo', 'big', 'blockquote', 'body', 'br', 'button', 'canvas', 'caption', 'center', 'cite', 'code', 'col', 'colgroup', 'command', 'datalist', 'dd', 'del', 'details', 'dfn', 'dir', 'div', 'dl', 'dt', 'em', 'embed', 'fieldset', 'figcaption', 'figure', 'font', 'footer', 'form', 'frame', 'frameset', 'h1', -'h6', 'head', 'header', 'hgroup', 'hr', 'html', 'i', 'iframe', 'img', 'input', 'ins', 'keygen', 'kbd', 'label', 'legend', 'li', 'link', 'map', 'mark', 'menu', 'meta', 'meter', 'nav', 'noframes', 'noscript', 'object', 'ol', 'optgroup', 'option', 'output', 'p', 'param', 'pre', 'progress', 'q', 'rp', 'rt', 'ruby', 's', 'samp', 'script', 'section', 'select', 'small', 'source', 'span', 'strike', 'strong', 'style', 'sub', 'summary', 'sup', 'table', 'tbody', 'td', 'textarea', 'tfoot', 'th', 'thead', 'time', 'title', 'tr', 'tt', 'u', 'ul', 'var', 'video', 'wbr', 'xmp'],
+
+    templates: {},
 
     initialize: function () {
         // Create methods from tags array
@@ -326,16 +364,15 @@ MTEEngine = new Class({
         }, this);
     },
 
-	// Arguments: 
-	// tag name, context expression, properties of corresponding element, content (templates, bindings, text etc)
+    // Arguments: 
+    // tag name, context expression, properties of corresponding element, content (templates, bindings, text etc)
     tag: function () {
-        var engine = this;
         var args = Object.values(arguments);
         var tag = args.shift();
 
-        var contextExpression = new MTEContextExpression(engine);
+        var contextExpression = new MTEContextExpression();
         if (instanceOf(args[0], MTEContextExpression)) {
-            contextExpression = args.shift();            
+            contextExpression = args.shift();
         }
 
         var elementProperties = {};
@@ -343,36 +380,45 @@ MTEEngine = new Class({
             elementProperties = args.shift();
         }
 
-        return new MTETemplate(this, tag, contextExpression, elementProperties, args);
+        return new MTETemplate(tag, contextExpression, elementProperties, args);
     },
 
     L: function (prop, itemTemplate, sortProperty) {
-        return new MTEListExpression(this, prop, itemTemplate, sortProperty);
+        return new MTEListExpression(prop, itemTemplate, sortProperty);
     },
     list: function (prop, itemTemplate, sortProperty) {
-        return new MTEListExpression(this, prop, itemTemplate, sortProperty);
+        return new MTEListExpression(prop, itemTemplate, sortProperty);
     },
 
     B: function (prop, formatter) {
-        return new MTEBindingExpression(this, prop, formatter);
+        return new MTEBindingExpression(prop, formatter);
     },
     bind: function (prop, formatter) {
-        return new MTEBindingExpression(this, prop, formatter);
+        return new MTEBindingExpression(prop, formatter);
     },
 
-    display: function(prop, formatter) {
-        return new MTEDisplayExpression(this, prop, formatter);
+    display: function (prop, formatter) {
+        return new MTEDisplayExpression(prop, formatter);
+    },
+
+    cssStyle: function (prop, style, formatter) {
+        return new MTECssStyleExpression(prop, style, formatter);
     },
 
     C: function (prop) {
-        return new MTEContextExpression(this, prop);
+        return new MTEContextExpression(prop);
     },
     context: function (prop) {
-        return new MTEContextExpression(this, prop);
+        return new MTEContextExpression(prop);
     },
 
-    adoptable: function (obj) {
-        return ['object', 'collection', 'element', 'elements', 'textnode', 'whitespace'].contains(typeOf(obj));
+    template: function (prop) {
+        return new MTETemplateReference(function (x) { return this.templates[x]; }.bind(this), prop);
     }
 });
 
+MTEUtil = {
+    isAdoptable: function (obj) {
+        return ['object', 'collection', 'element', 'elements', 'textnode', 'whitespace'].contains(typeOf(obj));
+    }
+}

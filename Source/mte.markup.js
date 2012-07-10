@@ -93,10 +93,19 @@ MTEEngine.Markup = new Class({
         var attributes = Array.from(element.attributes).map(function (attr) { return attr.name; });
         var options = element.getProperties.apply(element, attributes);
 
+        // data-bind-*
         Object.each(options, function (item, key) {
             var match = key.match(/data-bind-(.*)/);
             if (match && match.length == 2) {
                 options[match[1]] = this.bind(this._extractProperties(item), formatter);
+            }
+        }, this);
+
+        // data-style-*
+        Object.each(options, function (item, key) {
+            var match = key.match(/data-style-(.*)/);
+            if (match && match.length == 2) {
+                childTemplates.push(this.cssStyle(this._extractProperties(item), match[1], formatter));
             }
         }, this);
 
@@ -105,10 +114,21 @@ MTEEngine.Markup = new Class({
             childTemplates.push(this.display(displayProperty, formatter));
         }
 
-        options = Object.filter(options, function (value, key) { return value && !['data-formatter', 'data-context', 'id', 'data-list'].contains(key) && !key.contains('data-bind') });
+        var templateProperty = element.getProperty('data-template');
+        if (templateProperty) {
+            childTemplates.push(this.template(templateProperty));
+        }
+
+        var id = options.id;
+        options = Object.filter(options, function (value, key) { return value && !['data-formatter', 'data-context', 'id', 'data-list', 'data-template'].contains(key) && !key.contains('data-bind') && !key.contains('data-style'); });
 
         var args = [tagName].append(context).append([options]).append(childTemplates);
-        return this.tag.apply(this, args);
+        var tmpl = this.tag.apply(this, args);
+        if (id) {
+            this.templates[id] = tmpl;
+        }
+
+        return tmpl;
     },
 
     _extractProperties: function (bindProperty) {
